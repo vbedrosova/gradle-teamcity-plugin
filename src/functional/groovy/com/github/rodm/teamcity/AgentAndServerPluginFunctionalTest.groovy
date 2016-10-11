@@ -1,3 +1,18 @@
+/*
+ * Copyright 2015 Rod MacKenzie
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.github.rodm.teamcity
 
 import org.gradle.testkit.runner.BuildResult
@@ -21,33 +36,18 @@ public class AgentAndServerPluginFunctionalTest {
 
     private File buildFile
 
-    private String pluginClasspath
-
     @Before
     public void setup() throws IOException {
         buildFile = testProjectDir.newFile("build.gradle")
-
-        def pluginClasspathResource = getClass().classLoader.findResource("plugin-classpath.txt")
-        if (pluginClasspathResource == null) {
-            throw new IllegalStateException("Did not find plugin classpath resource, run `testClasses` build task.")
-        }
-
-        pluginClasspath = pluginClasspathResource.readLines()
-                .collect { it.replace('\\', '\\\\') } // escape backslashes in Windows paths
-                .collect { "'$it'" }
-                .join(", ")
     }
 
     @Test
     public void agentAndServerPluginPackage() {
         buildFile << """
-            buildscript {
-                dependencies {
-                    classpath files(${pluginClasspath})
-                }
+            plugins {
+                id 'com.github.rodm.teamcity-agent'
+                id 'com.github.rodm.teamcity-server'
             }
-            apply plugin: 'com.github.rodm.teamcity-agent'
-            apply plugin: 'com.github.rodm.teamcity-server'
             dependencies {
                 agent files('lib/agent-lib.jar')
                 server files('lib/server-lib.jar')
@@ -77,6 +77,7 @@ public class AgentAndServerPluginFunctionalTest {
         BuildResult result = GradleRunner.create()
                 .withProjectDir(testProjectDir.getRoot())
                 .withArguments("build")
+                .withPluginClasspath()
                 .build();
 
         assertEquals(result.task(":agentPlugin").getOutcome(), SUCCESS)
@@ -98,10 +99,9 @@ public class AgentAndServerPluginFunctionalTest {
     @Test
     public void multiProjectPlugin() {
         buildFile << """
-            buildscript {
-                dependencies {
-                    classpath files(${pluginClasspath})
-                }
+            plugins {
+                id 'com.github.rodm.teamcity-agent'
+                id 'com.github.rodm.teamcity-server'
             }
 
             subprojects {
@@ -119,9 +119,6 @@ public class AgentAndServerPluginFunctionalTest {
                     compile files("\$rootDir/lib/server-lib.jar")
                 }
             }
-
-            apply plugin: 'com.github.rodm.teamcity-agent'
-            apply plugin: 'com.github.rodm.teamcity-server'
 
             dependencies {
                 agent project(':agent')
@@ -160,6 +157,7 @@ public class AgentAndServerPluginFunctionalTest {
         BuildResult result = GradleRunner.create()
                 .withProjectDir(testProjectDir.getRoot())
                 .withArguments("build")
+                .withPluginClasspath()
                 .build();
 
         assertEquals(result.task(":agentPlugin").getOutcome(), SUCCESS)
@@ -184,14 +182,11 @@ public class AgentAndServerPluginFunctionalTest {
     @Test
     public void pluginsWithJavaFail() {
         buildFile << """
-            buildscript {
-                dependencies {
-                    classpath files(${pluginClasspath})
-                }
+            plugins {
+                id 'java'
+                id 'com.github.rodm.teamcity-agent'
+                id 'com.github.rodm.teamcity-server'
             }
-            apply plugin: 'java'
-            apply plugin: 'com.github.rodm.teamcity-agent'
-            apply plugin: 'com.github.rodm.teamcity-server'
             teamcity {
                 version = '8.1.5'
             }
@@ -200,8 +195,9 @@ public class AgentAndServerPluginFunctionalTest {
         BuildResult result = GradleRunner.create()
                 .withProjectDir(testProjectDir.getRoot())
                 .withArguments("assemble")
+                .withPluginClasspath()
                 .buildAndFail()
 
-        assertThat(result.getStandardError(), containsString("Cannot apply both the teamcity-agent and teamcity-server plugins with the Java plugin"))
+        assertThat(result.getOutput(), containsString("Cannot apply both the teamcity-agent and teamcity-server plugins with the Java plugin"))
     }
 }

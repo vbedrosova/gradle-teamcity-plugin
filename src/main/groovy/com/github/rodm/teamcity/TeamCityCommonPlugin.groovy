@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Rod MacKenzie
+ * Copyright 2016 Vladislav Rassokhin from JetBrains
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,31 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.rodm.teamcity.tasks
+package com.github.rodm.teamcity
 
-import org.gradle.api.DefaultTask
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.Project
+import org.gradle.api.plugins.JavaPlugin
 
-class DeployPlugin extends DefaultTask {
+class TeamCityCommonPlugin extends TeamCityPlugin {
 
-    @InputFile
-    File file
-
-    @OutputDirectory
-    File target
-
-    DeployPlugin() {
-        group = 'TeamCity'
-        description = 'Deploy plugin'
-    }
-
-    @TaskAction
-    public void deploy() {
-        project.copy {
-            from getFile()
-            into getTarget()
+    @Override
+    void configureTasks(Project project, TeamCityPluginExtension extension) {
+        project.plugins.withType(JavaPlugin) {
+            project.afterEvaluate {
+                project.dependencies {
+                    provided "org.jetbrains.teamcity:common-api:${extension.version}"
+                }
+            }
         }
     }
 }

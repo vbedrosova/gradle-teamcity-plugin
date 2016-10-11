@@ -15,6 +15,8 @@
  */
 package com.github.rodm.teamcity
 
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.util.ConfigureUtil
 
@@ -22,21 +24,7 @@ class TeamCityPluginExtension {
 
     String version = '9.0'
 
-    File homeDir
-
-    File dataDir
-
-    File javaHome
-
-    String serverOptions = '-Dteamcity.development.mode=true -Dteamcity.development.shadowCopyClasses=true'
-
-    String downloadBaseUrl = 'http://download.jetbrains.com/teamcity'
-
-    String downloadUrl
-
-    String downloadDir = 'downloads'
-
-    String downloadFile
+    boolean defaultRepositories = true
 
     private AgentPluginConfiguration agent
 
@@ -44,10 +32,10 @@ class TeamCityPluginExtension {
 
     private Project project
 
-    TeamCityPluginExtension(Project project) {
+    TeamCityPluginExtension(Project project, NamedDomainObjectContainer<TeamCityEnvironment> environments) {
         this.project = project
         this.agent = new AgentPluginConfiguration(project.copySpec {})
-        this.server = new ServerPluginConfiguration(project.copySpec {})
+        this.server = new ServerPluginConfiguration(project, environments)
     }
 
     def getAgent() {
@@ -55,6 +43,8 @@ class TeamCityPluginExtension {
     }
 
     def agent(Closure closure) {
+        if (!project.plugins.hasPlugin(TeamCityAgentPlugin))
+            throw new InvalidUserDataException('Agent plugin configuration is invalid for a project without the teamcity-agent plugin')
         ConfigureUtil.configure(closure, agent)
     }
 
@@ -63,6 +53,8 @@ class TeamCityPluginExtension {
     }
 
     def server(Closure closure) {
+        if (!project.plugins.hasPlugin(TeamCityServerPlugin))
+            throw new InvalidUserDataException('Server plugin configuration is invalid for a project without the teamcity-server plugin')
         ConfigureUtil.configure(closure, server)
     }
 
@@ -112,19 +104,5 @@ class TeamCityPluginExtension {
         } else {
             server.tokens tokens
         }
-    }
-
-    def getDownloadUrl() {
-        if (!downloadUrl) {
-            downloadUrl = "${downloadBaseUrl}/TeamCity-${version}.tar.gz"
-        }
-        return downloadUrl
-    }
-
-    def getDownloadFile() {
-        if (!downloadFile) {
-            downloadFile = "${downloadDir}/TeamCity-${version}.tar.gz"
-        }
-        return downloadFile
     }
 }

@@ -24,6 +24,8 @@ import org.gradle.api.tasks.bundling.Zip
 
 class TeamCityAgentPlugin extends TeamCityPlugin {
 
+    public static final String PLUGIN_DEFINITION_PATTERN = "META-INF/build-agent-plugin*.xml"
+
     public static final String AGENT_PLUGIN_DESCRIPTOR_DIR = PLUGIN_DESCRIPTOR_DIR + '/agent'
 
     @Override
@@ -35,6 +37,8 @@ class TeamCityAgentPlugin extends TeamCityPlugin {
                 }
             }
         }
+
+        configureJarTask(project, PLUGIN_DEFINITION_PATTERN)
 
         def packagePlugin = project.tasks.create('agentPlugin', Zip)
         packagePlugin.description = 'Package TeamCity Agent plugin'

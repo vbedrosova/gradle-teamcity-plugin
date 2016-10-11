@@ -1,7 +1,12 @@
+
+# Don't use the Travis Container-Based Infrastructure
+sudo: true
+
 language: java
 
 jdk:
-  - openjdk6
+  - oraclejdk7
+  - oraclejdk8
 
 script:
-  - ./gradlew clean build functionalTest
+  - ./gradlew -S clean build functionalTest

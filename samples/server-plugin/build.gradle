@@ -1,12 +1,13 @@
 
 buildscript {
     repositories {
+        mavenLocal()
         maven {
             url "https://plugins.gradle.org/m2/"
         }
     }
     dependencies {
-        classpath group: 'com.github.rodm', name: 'gradle-teamcity-plugin', version: '0.8.1'
+        classpath group: 'com.github.rodm', name: 'gradle-teamcity-plugin', version: '0.10-SNAPSHOT'
     }
 }
 
@@ -17,10 +18,13 @@ group = 'com.github.rodm.teamcity'
 version = '1.0-SNAPSHOT'
 
 ext {
+    vendorName = 'rodm'
     teamcityVersion = '8.1.5'
-    teamcityDir = "$rootDir/servers/TeamCity-${teamcityVersion}"
-    teamcityDataDir = "$rootDir/data/" + (teamcityVersion =~ /(\d+\.\d+).*/)[0][1]
-    teamcityJavaHome = System.properties['java.home']
+
+    downloadsDir = project.findProperty('downloads.dir') ?: "$rootDir/downloads"
+    serversDir = project.findProperty('servers.dir') ?: "$rootDir/servers"
+    java7Home = project.findProperty('java7.home') ?: '/opt/jdk1.7.0_80'
+    java8Home = project.findProperty('java8.home') ?: '/opt/jdk1.8.0_92'
 }
 
 test {
@@ -30,23 +34,42 @@ test {
 teamcity {
     version = teamcityVersion
 
-    descriptor {
-        name = project.name
-        displayName = project.name
-        version = project.version
-        vendorName = 'vendor name'
-        description = 'TeamCity Example Server Plugin'
+    server {
+        descriptor {
+            name = project.name
+            displayName = project.name
+            version = project.version
+            vendorName = project.vendorName
+            description = 'TeamCity Example Server Plugin'
 
-        downloadUrl = 'https://github.com/rodm/gradle-teamcity-plugin/'
-        email = 'rod.n.mackenzie@gmail.com'
-        useSeparateClassloader = false
+            downloadUrl = 'https://github.com/rodm/gradle-teamcity-plugin/'
+            email = 'rod.n.mackenzie@gmail.com'
+            useSeparateClassloader = false
 
-        parameters {
-            parameter 'param', 'value'
+            parameters {
+                parameter 'param', 'value'
+            }
+        }
+
+        downloadsDir = project.downloadsDir
+        baseHomeDir = project.serversDir
+        baseDataDir = 'data'
+
+        environments {
+            teamcity81 {
+                version = '8.1.5'
+                javaHome = file(java7Home)
+            }
+
+            teamcity91 {
+                version = '9.1.6'
+                javaHome = file(java7Home)
+            }
+
+            teamcity10 {
+                version = '10.0'
+                javaHome = file(java8Home)
+            }
         }
     }
-
-    homeDir = file(teamcityDir)
-    dataDir = file(teamcityDataDir)
-    javaHome = file(teamcityJavaHome)
 }

@@ -15,12 +15,15 @@
  */
 package com.github.rodm.teamcity.tasks
 
+import com.github.rodm.teamcity.ProgressLoggerWrapper
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 class Download extends DefaultTask {
+
+    private static final int BUFFER_SIZE = 10000;
 
     @Input
     String source
@@ -30,7 +33,39 @@ class Download extends DefaultTask {
 
     @TaskAction
     void download() {
-        logger.info("Downloading TeamCity installer from {} to {}", getSource(), getTarget())
-        new URL(getSource()).withInputStream { is -> getTarget().withOutputStream { os -> os << is }}
+        ProgressLoggerWrapper progressLogger = new ProgressLoggerWrapper(project, getSource())
+        OutputStream os = null
+        InputStream is = null
+        try {
+            progressLogger.started()
+
+            os = new BufferedOutputStream(new FileOutputStream(getTarget()))
+            URLConnection conn = new URL(getSource()).openConnection()
+            is = conn.getInputStream()
+            int bytesRead
+            long totalBytesRead = 0
+            long loggedMb = 0
+            byte[] buffer = new byte[BUFFER_SIZE]
+            while ((bytesRead = is.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+
+                totalBytesRead += bytesRead;
+                long processedMb = totalBytesRead / (1024 * 1024)
+                if (processedMb > loggedMb) {
+                    progressLogger.progress(String.format("%dMB downloaded", processedMb))
+                    loggedMb = processedMb
+                }
+            }
+        }
+        finally {
+            progressLogger.completed()
+
+            if (is != null) {
+                is.close();
+            }
+            if (os != null) {
+                os.close();
+            }
+        }
     }
 }
